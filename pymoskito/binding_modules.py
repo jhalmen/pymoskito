@@ -95,8 +95,12 @@ class CppBase:
 
         if self.create_binding_config():
             self.build_binding()
+            if os.name == 'nt' and 'GCC' not in sys.version:
+                libPath = (self.build_path / 'Release' / self.module_name)
+            else:
+                libPath = (self.build_path / self.module_name)
             ModuleFinder().register(self.module_name,
-                                    (self.build_path / self.module_name).with_suffix(self.sfx))
+                                    libPath.with_suffix(self.sfx))
             self.bindings = self.load()
 
     def create_binding_config(self):
@@ -209,20 +213,9 @@ set(PYTHON_MODULE_EXTENSION "{}")
             raise BindingException(message)
 
     def load(self):
-        if os.name == 'nt' and 'GCC' not in sys.version:
-            try:
-                spec = importlib.util.spec_from_file_location(self.module_name,
-                                                              (self.build_path / 'Release' / self.module_name).with_suffix(self.sfx))
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-                return module
-            except ImportError as e:
-                self._logger.error("Cannot load module: {}".format(e))
-                raise e
-        else:
-            if self.module_name in sys.modules:
-                del sys.modules[self.module_name]
-            return importlib.import_module(self.module_name)
+        if self.module_name in sys.modules:
+            del sys.modules[self.module_name]
+        return importlib.import_module(self.module_name)
 
 
 class ModuleFinder(importlib.abc.MetaPathFinder):
