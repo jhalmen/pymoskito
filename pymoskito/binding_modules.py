@@ -134,17 +134,16 @@ class CppBase:
 
         Returns:
         """
-        py_ver = sys.version_info
         c_make_lists = """
 cmake_minimum_required(VERSION 3.15)
 project(Bindings)
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
 
-find_package(pybind11 CONFIG REQUIRED PATHS ${Python_SITELIB})
+find_package(pybind11 CONFIG REQUIRED PATHS ${{Python_SITELIB}})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY .)
-set(PYTHON_MODULE_EXTENSION ".so")
-"""
+set(PYTHON_MODULE_EXTENSION "{}")
+""".format(self.sfx)
 
         with open(self.build_path / CMAKE_LISTS, "w") as f:
             f.write(c_make_lists)
@@ -160,7 +159,7 @@ set(PYTHON_MODULE_EXTENSION ".so")
         cmake_line = "\ninclude({}.cmake)\n".format(self.module_name)
         config_line = "\npybind11_add_module({} SHARED {})\n".format(
             self.module_name,
-            " ".join([os.path.relpath(self.module_path / src, self.build_path) for src in self.sources]),
+            " ".join([Path(os.path.relpath(self.module_path / src, self.build_path)).as_posix() for src in self.sources]),
         )
         if self.additional_lib:
             for value in self.additional_lib.values():
@@ -199,7 +198,7 @@ set(PYTHON_MODULE_EXTENSION ".so")
     def build_binding(self):
         # build
         if os.name == 'nt' and 'GCC' not in sys.version:
-            cmd = ['cmake', '--build', '.', '--config', 'Release', '--target', 'INSTALL']
+            cmd = ['cmake', '--build', '.', '--config', 'Release', '--target', self.module_name]
         else:
             cmd = ['cmake', '--build', '.', '-t', self.module_name]
         result = subprocess.run(cmd, cwd=self.build_path)
@@ -210,9 +209,20 @@ set(PYTHON_MODULE_EXTENSION ".so")
             raise BindingException(message)
 
     def load(self):
-        if self.module_name in sys.modules:
-            del sys.modules[self.module_name]
-        return importlib.import_module(self.module_name)
+        if os.name == 'nt' and 'GCC' not in sys.version:
+            try:
+                spec = importlib.util.spec_from_file_location(self.module_name,
+                                                              (self.build_path / 'Release' / self.module_name).with_suffix(self.sfx))
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return module
+            except ImportError as e:
+                self._logger.error("Cannot load module: {}".format(e))
+                raise e
+        else:
+            if self.module_name in sys.modules:
+                del sys.modules[self.module_name]
+            return importlib.import_module(self.module_name)
 
 
 class ModuleFinder(importlib.abc.MetaPathFinder):
