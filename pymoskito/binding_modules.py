@@ -40,6 +40,7 @@ class CppBase:
         :additional_sources: List of additional cpp files to compile into module
         :additional_lib: dict with key 'lib name' and additional lines for the
           CMakeLists
+        :additional_compile_defs: list with compiler definitions
 
     Warn:
         `additional_sources` will be added to the compilation unit.
@@ -53,7 +54,8 @@ class CppBase:
                  binding_source=None,
                  additional_sources=None,
                  binding_class_name=None,
-                 additional_lib=None):
+                 additional_lib=None,
+                 additional_compile_defs=None):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         # adapt to os-specific extensions
@@ -92,6 +94,11 @@ class CppBase:
         if additional_lib is not None:
             assert (isinstance(additional_lib, dict))
             self.additional_lib = additional_lib
+
+        self.additional_compile_defs = None
+        if additional_compile_defs is not None:
+            assert (isinstance(additional_compile_defs, list))
+            self.additional_compile_defs = additional_compile_defs
 
         if self.create_binding_config():
             self.build_binding()
@@ -172,6 +179,12 @@ set(PYTHON_MODULE_EXTENSION "{}")
                 self.module_name,
                 " ".join(self.additional_lib.keys()),
             )
+        if self.additional_compile_defs:
+            config_line += "\nadd_compile_definitions("
+            for value in self.additional_compile_defs:
+                config_line += value + " "
+            config_line += ")\n"
+
         ret = False
         with open(self.build_path / "{}.cmake".format(self.module_name), 'w+') as f:
             if config_line not in f.read():
