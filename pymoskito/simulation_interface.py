@@ -397,7 +397,7 @@ class SimulatorInteractor(QObject):
 
         # overwrite all settings with the provided ones
         for module_name, value in reg.items():
-            if module_name == "Name" or module_name == "clear previous":
+            if module_name == "Name" or module_name == "clear previous" or module_name == "Visu":
                 continue
 
             # sanity check

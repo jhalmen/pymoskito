@@ -539,10 +539,7 @@ class SimulationGui(QMainWindow):
             self.visuComboBox.addItem(name)
 
         # instantiate the first visualizer or None
-        if self.visuComboBox.count() > 0:
-            self.visuComboBox.setCurrentIndex(1)
-        else:
-            self.visuComboBox.setCurrentIndex(0)
+        self.visuComboBox.setCurrentIndex(0)
 
     @pyqtSlot(str)
     def _visualizer_changed(self, name):
@@ -553,6 +550,26 @@ class SimulationGui(QMainWindow):
         cls = next((_c for _c, _n in available_vis if _n == name),
                    DummyVisualizer)
         self._update_visualizer(cls)
+
+    def _configure_visualizer(self, idx):
+        available_vis = get_registered_visualizers()
+        if not available_vis:
+            return
+
+        usedIdx = 0
+        used = available_vis[usedIdx]
+
+        if 'Visu' in self._regimes[idx]:
+            if self._regimes[idx]['Visu'] is not None:
+                vis = self._regimes[idx]['Visu']
+                for idx, avis in enumerate(available_vis):
+                    if vis == avis[1]:
+                        used = avis
+                        usedIdx = idx
+                        break
+
+        self._update_visualizer(used[0])
+        self.visuComboBox.setCurrentIndex(usedIdx + 1)
 
     def _update_visualizer(self, visu_cls):
         """ Update the current visualizer """
@@ -795,6 +812,8 @@ class SimulationGui(QMainWindow):
         self.statusBar().showMessage(
             "restored simulation '{}'.".format(sim_name),
             1000)
+
+        self._configure_visualizer(idx)
 
     def _add_setting(self, setting, value):
         """
@@ -1096,6 +1115,9 @@ class SimulationGui(QMainWindow):
         self.setQListItemBold(self.regime_list, item, success)
         self.setQListItemBold(self.lastSimList, item, success)
         self.dataPointListWidget.clear()
+
+        if success:
+            self._configure_visualizer(self.regime_list.row(item))
 
     def apply_regime_by_name(self, regime_name):
         """
