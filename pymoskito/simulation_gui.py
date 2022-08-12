@@ -813,7 +813,7 @@ class SimulationGui(QMainWindow):
             "restored simulation '{}'.".format(sim_name),
             1000)
 
-        self._configure_visualizer(idx)
+        self._configure_visualizer(list(map(itemgetter("Name"), self._regimes)).index(item.text().split(':')[-1]))
 
     def _add_setting(self, setting, value):
         """
