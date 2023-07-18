@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import importlib.util
+from importlib import abc, util, import_module
 import logging
 import os
 import subprocess
@@ -228,10 +228,10 @@ set(PYTHON_MODULE_EXTENSION "{}")
     def load(self):
         if self.module_name in sys.modules:
             del sys.modules[self.module_name]
-        return importlib.import_module(self.module_name)
+        return import_module(self.module_name)
 
 
-class ModuleFinder(importlib.abc.MetaPathFinder):
+class ModuleFinder(abc.MetaPathFinder):
     _instance = None
 
     def __new__(cls):
@@ -249,4 +249,4 @@ class ModuleFinder(importlib.abc.MetaPathFinder):
     def find_spec(self, name, path, target=None):
         if not name in self.path_map:
             return None
-        return importlib.util.spec_from_file_location(name, self.path_map[name])
+        return util.spec_from_file_location(name, self.path_map[name])
